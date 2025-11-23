@@ -1,9 +1,7 @@
-
 import java.io.*;
 import java.util.*;
 
 public class AvoidingYourBoss {
-
     static class Edge {
         int to, cost;
         Edge(int to, int cost) {
@@ -13,93 +11,116 @@ public class AvoidingYourBoss {
     }
 
     static final int INF = 1000000000;
-    static int P, R, BH, OF, YH, M;
     static ArrayList<Edge>[] graph;
+    static int numPlaces;
 
-    static int[] dijkstra(int start, boolean[] blocked) {
-        int[] dist = new int[P + 1];
-        Arrays.fill(dist, INF);
-        dist[start] = 0;
+    public static void main(String[] args) throws Exception {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        String line;
+
+        while ((line = reader.readLine()) != null && !line.isEmpty()) {
+            int[] params = parseInput(line, reader);
+            int bossHome = params[0];
+            int office = params[1];
+            int yourHome = params[2];
+            int market = params[3];
+
+            int safeCost = findSafePath(bossHome, office, yourHome, market);
+
+            if (safeCost == INF) {
+                System.out.println("MISSION IMPOSSIBLE.");
+            } else {
+                System.out.println(safeCost);
+            }
+        }
+    }
+
+    static int[] parseInput(String firstLine, BufferedReader reader) throws IOException {
+        StringTokenizer st = new StringTokenizer(firstLine);
+        numPlaces = Integer.parseInt(st.nextToken());
+        int numRoads = Integer.parseInt(st.nextToken());
+        int bossHome = Integer.parseInt(st.nextToken());
+        int office = Integer.parseInt(st.nextToken());
+        int yourHome = Integer.parseInt(st.nextToken());
+        int market = Integer.parseInt(st.nextToken());
+
+        buildGraph(numRoads, reader);
+
+        return new int[]{bossHome, office, yourHome, market};
+    }
+
+    static void buildGraph(int numRoads, BufferedReader reader) throws IOException {
+        graph = new ArrayList[numPlaces + 1];
+        for (int i = 0; i <= numPlaces; i++) {
+            graph[i] = new ArrayList<>();
+        }
+
+        for (int i = 0; i < numRoads; i++) {
+            StringTokenizer st = new StringTokenizer(reader.readLine());
+            int place1 = Integer.parseInt(st.nextToken());
+            int place2 = Integer.parseInt(st.nextToken());
+            int cost = Integer.parseInt(st.nextToken());
+
+            graph[place1].add(new Edge(place2, cost));
+            graph[place2].add(new Edge(place1, cost));
+        }
+    }
+
+    static int findSafePath(int bossHome, int office, int yourHome, int market) {
+        if (yourHome == market) {
+            return INF; // Can't stay home and reach market
+        }
+
+        int[] distFromBossHome = dijkstra(bossHome, new boolean[numPlaces + 1]);
+        int[] distFromOffice = dijkstra(office, new boolean[numPlaces + 1]);
+
+        boolean[] unsafePlaces = markUnsafePlaces(distFromBossHome, distFromOffice, yourHome);
+
+        int[] distFromYourHome = dijkstra(yourHome, unsafePlaces);
+        return distFromYourHome[market];
+    }
+
+    static boolean[] markUnsafePlaces(int[] distFromBossHome, int[] distFromOffice, int yourHome) {
+        int bossShortestPath = distFromBossHome[distFromOffice.length - 1];
+        boolean[] unsafe = new boolean[numPlaces + 1];
+
+        for (int place = 1; place <= numPlaces; place++) {
+            boolean onShortestPath = distFromBossHome[place] != INF
+                    && distFromOffice[place] != INF
+                    && distFromBossHome[place] + distFromOffice[place] == bossShortestPath;
+            unsafe[place] = onShortestPath;
+        }
+
+        unsafe[yourHome] = false; // Your home is always safe to start
+        return unsafe;
+    }
+
+    static int[] dijkstra(int start, boolean[] blockedPlaces) {
+        int[] distance = new int[numPlaces + 1];
+        Arrays.fill(distance, INF);
+        distance[start] = 0;
 
         PriorityQueue<int[]> pq = new PriorityQueue<>(Comparator.comparingInt(a -> a[1]));
         pq.add(new int[]{start, 0});
 
         while (!pq.isEmpty()) {
-            int[] cur = pq.poll();
-            int u = cur[0];
-            int d = cur[1];
+            int[] current = pq.poll();
+            int place = current[0];
+            int dist = current[1];
 
-            if (d > dist[u]) continue;
+            if (dist > distance[place]) continue;
 
-            for (Edge e : graph[u]) {
-                int v = e.to;
-                int w = e.cost;
-                if (blocked[v]) continue; // skip unsafe nodes
+            for (Edge edge : graph[place]) {
+                if (blockedPlaces[edge.to]) continue;
 
-                if (dist[v] > dist[u] + w) {
-                    dist[v] = dist[u] + w;
-                    pq.add(new int[]{v, dist[v]});
+                int newDist = distance[place] + edge.cost;
+                if (newDist < distance[edge.to]) {
+                    distance[edge.to] = newDist;
+                    pq.add(new int[]{edge.to, newDist});
                 }
             }
         }
-        return dist;
-    }
 
-    public static void main(String[] args) throws Exception {
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        String line;
-
-        while ((line = br.readLine()) != null && !line.isEmpty()) {
-            StringTokenizer st = new StringTokenizer(line);
-            P = Integer.parseInt(st.nextToken());
-            R = Integer.parseInt(st.nextToken());
-            BH = Integer.parseInt(st.nextToken());
-            OF = Integer.parseInt(st.nextToken());
-            YH = Integer.parseInt(st.nextToken());
-            M = Integer.parseInt(st.nextToken());
-
-            graph = new ArrayList[P + 1];
-            for (int i = 0; i <= P; i++) {
-                graph[i] = new ArrayList<>();
-            }
-
-            for (int i = 0; i < R; i++) {
-                st = new StringTokenizer(br.readLine());
-                int a = Integer.parseInt(st.nextToken());
-                int b = Integer.parseInt(st.nextToken());
-                int c = Integer.parseInt(st.nextToken());
-                graph[a].add(new Edge(b, c));
-                graph[b].add(new Edge(a, c));
-            }
-
-            // Run Dijkstra for boss’s home and office
-            boolean[] noneBlocked = new boolean[P + 1];
-            int[] distBH = dijkstra(BH, noneBlocked);
-            int[] distOF = dijkstra(OF, noneBlocked);
-            int bossShortest = distBH[OF];
-
-            // Mark unsafe nodes (on any shortest path between BH and OF)
-            boolean[] unsafe = new boolean[P + 1];
-            for (int i = 1; i <= P; i++) {
-                if (distBH[i] != INF && distOF[i] != INF &&
-                        distBH[i] + distOF[i] == bossShortest) {
-                    unsafe[i] = true;
-                }
-            }
-
-            // Your home is always safe to start from
-            unsafe[YH] = false;
-
-            // Now run Dijkstra from your home to market, avoiding unsafe nodes
-            int[] distYou = dijkstra(YH, unsafe);
-
-            if (YH == M || distYou[M] == 0) {
-                System.out.println("MISSION IMPOSSIBLE.");
-            } else if (distYou[M] == INF) {
-                System.out.println("MISSION IMPOSSIBLE.");
-            } else {
-                System.out.println(distYou[M]);
-            }
-        }
+        return distance;
     }
 }
