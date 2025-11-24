@@ -84,38 +84,31 @@ public class AvoidingYourBoss {
     }
 
     static int findSafePath(int bossHome, int office, int yourHome, int market) {
-        if (yourHome == market) {
-            return INF;
-        }
 
-        //Dijkstra dari BH dan OF
         int[] distFromBossHome = dijkstra(bossHome, new boolean[numPlaces + 1]);
         int[] distFromOffice = dijkstra(office, new boolean[numPlaces + 1]);
 
-        //Menandai tempat-tempat yang tidak aman(ada di jalur terpendek BH ke OF)
-        boolean[] unsafePlaces = markUnsafePlaces(distFromBossHome, distFromOffice, yourHome);
+        boolean[] unsafePlaces = markUnsafePlaces(distFromBossHome, distFromOffice, office);
 
-        //Dijkstra dari YH menghindari tempat-tempat tidak aman
+        if (unsafePlaces[yourHome]) return INF;
+
         int[] distFromYourHome = dijkstra(yourHome, unsafePlaces);
         return distFromYourHome[market];
     }
 
-    static boolean[] markUnsafePlaces(int[] distFromBossHome, int[] distFromOffice, int yourHome) {
-        //Menghitung jarak terpendek dari BH ke OF
-        int bossShortestPath = distFromBossHome[distFromOffice.length - 1];
-        //Menandai tempat-tempat yang ada di jalur terpendek
+    static boolean[] markUnsafePlaces(int[] distFromBossHome, int[] distFromOffice, int office) {
+
+        int bossShortestPath = distFromBossHome[office];
+
         boolean[] unsafe = new boolean[numPlaces + 1];
 
         for (int place = 1; place <= numPlaces; place++) {
-            //Cek apakah tempat tersebut ada di jalur terpendek
             boolean onShortestPath = distFromBossHome[place] != INF
-                    && distFromOffice[place] != INF //ada di jalur
-                    // cek path BH -> place -> OF jarak totalnya sesuai dengan jarak terpendek
+                    && distFromOffice[place] != INF
                     && distFromBossHome[place] + distFromOffice[place] == bossShortestPath;
-            unsafe[place] = onShortestPath; // tandai sebagai tidak aman jika ada di jalur terpendek
+            unsafe[place] = onShortestPath;
         }
 
-        unsafe[yourHome] = false; // YH selalu aman
         return unsafe;
     }
 
