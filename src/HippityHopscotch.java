@@ -30,7 +30,6 @@ public class HippityHopscotch {
                         memo[i][j] = -1; //-1 artinya belum dihitung
                     }
                 }
-
                 //Start DFS dari (0,0)
                 System.out.println(dfs(0, 0));
 
@@ -44,7 +43,7 @@ public class HippityHopscotch {
 
     //Rekursi dfs dengan memoization
     static long dfs(int r, int c) {
-        //kalau kita sudah menghitung nilai untuk (r,c), kembalikan nilainya
+        //kalau kita sudah menghitung nilai untuk (r,c), kembalikan nilainya memo
         if (memo[r][c] != -1) return memo[r][c];
 
         long maxFromNextStep = 0; //menyimpan nilai maksimum dari langkah selanjutnya
@@ -72,7 +71,6 @@ public class HippityHopscotch {
                 }
             }
         }
-
         //return calue cell sekarang + path terbaik yang ditemukan dari sini
         return memo[r][c] = grid[r][c] + maxFromNextStep;
     }
